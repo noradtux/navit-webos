@@ -1681,6 +1681,9 @@ msgstr "Fahrzeugposition"
 msgid "Main menu"
 msgstr "Hauptmenü"
 
+msgid "Advanced"
+msgstr "Erweitert"
+
 msgid ""
 "Show\n"
 "Map"
@@ -1729,7 +1732,7 @@ msgstr "Vollbild"
 msgid ""
 "Map follows\n"
 "Vehicle"
-msgsrt ""
+msgstr ""
 "Karte folgt\n"
 "Fahrzeug"
 
