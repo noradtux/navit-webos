@@ -91,6 +91,11 @@ Waypoint</text></img>
 				<img cond='navit.route.route_status&amp;52' src='gui_stop' onclick='navit.route_remove_next_waypoint()'><text>Drop next 
 Waypoint</text></img>
 			</a>
+<text>Advanced</text>
+<text>Lock on
+Road</text>
+<text>Map follows
+Vehicle</text>
 			</html>
 		]]></gui>
 		<!-- for a debug log -->
