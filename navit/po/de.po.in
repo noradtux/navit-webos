@@ -1349,8 +1349,13 @@ msgstr "_Vorherige Ziele"
 msgid "_Bookmarks"
 msgstr "_Lesezeichen"
 
+<<<<<<< HEAD
 msgid "_Map"
 msgstr "_Karte"
+=======
+msgid "Layout"
+msgstr "Layout"
+>>>>>>> add translations for new menu
 
 msgid "_Layout"
 msgstr "_Erscheinungsbild"
@@ -1718,7 +1723,6 @@ msgstr ""
 "Navigation\n"
 "beenden"
 
-<<<<<<< HEAD
 msgid "Display"
 msgstr "Anzeige"
 
@@ -1729,12 +1733,6 @@ msgid ""
 "Map follows\n"
 "Vehicle"
 msgstr ""
-=======
-msgid ""
-"Map follows\n"
-"Vehicle"
-msgsrt ""
->>>>>>> apply-development-changes
 "Karte folgt\n"
 "Fahrzeug"
 
