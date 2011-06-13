@@ -1422,6 +1422,11 @@ msgstr "Routenbeschreibung anzeigen/schließen"
 msgid "_Autozoom"
 msgstr "_automatischer Zoom"
 
+msgid "Autozoom"
+msgstr ""
+"automatischer\n"
+"Zoom"
+
 msgid "Enable/disable automatic zoom level changing"
 msgstr "Automatischen Zoom einschalten/ausschalten"
 
@@ -1720,6 +1725,20 @@ msgstr "Anzeige"
 
 msgid "Fullscreen"
 msgstr "Vollbild"
+
+msgid ""
+"Map follows\n"
+"Vehicle"
+msgsrt ""
+"Karte folgt\n"
+"Fahrzeug"
+
+msgid ""
+"Lock on\n"
+"Road"
+msgstr ""
+"Auf Straße\n"
+"zeigen"
 
 msgid "Window Mode"
 msgstr "Fenstermodus"
