@@ -1718,6 +1718,7 @@ msgstr ""
 "Navigation\n"
 "beenden"
 
+<<<<<<< HEAD
 msgid "Display"
 msgstr "Anzeige"
 
@@ -1728,6 +1729,12 @@ msgid ""
 "Map follows\n"
 "Vehicle"
 msgstr ""
+=======
+msgid ""
+"Map follows\n"
+"Vehicle"
+msgsrt ""
+>>>>>>> apply-development-changes
 "Karte folgt\n"
 "Fahrzeug"
 
