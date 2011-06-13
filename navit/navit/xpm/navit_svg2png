@@ -13,7 +13,7 @@ svgtopng()
 		$svgtopng --without-gui --export-width=$1 --export-height=$2 --export-png=$BUILDDIR/$4 $3
 		;;
 	*convert)
-		$svgtopng $3 -resize $1x$2 $4
+		$svgtopng -background none $3 -resize $1x$2 $4
 		;;
 	esac
 }
@@ -36,7 +36,7 @@ case "$png" in
 		svg=${png%.png}
 		;;
 esac
-if [ ! -f $svg.svg -a ! -f $svg.svgz ]
+if [ ! -f $svg.svg -a ! -f $svg.svgz -a ! -f $svg.xpm ]
 then
 	svg="$SRCDIR/$svg"
 fi
@@ -69,6 +69,14 @@ else
 		fi
 		svgtopng $w $h $svg.svg $png
 		rm -f $svg.svg
+	elif [ -f $svg.xpm ]
+	then
+		echo "w:$w h:$h"
+		if [ -z "$w" -a -z "$h" ]; then
+			convert -background none $svg.xpm $png
+		else
+			convert -background none $svg.xpm -resize ${w}x${h} $png
+		fi
 	fi
 fi
 exit 0
