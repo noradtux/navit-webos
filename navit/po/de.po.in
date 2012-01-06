@@ -1349,13 +1349,8 @@ msgstr "_Vorherige Ziele"
 msgid "_Bookmarks"
 msgstr "_Lesezeichen"
 
-<<<<<<< HEAD
 msgid "_Map"
 msgstr "_Karte"
-=======
-msgid "Layout"
-msgstr "Layout"
->>>>>>> add translations for new menu
 
 msgid "_Layout"
 msgstr "_Erscheinungsbild"
