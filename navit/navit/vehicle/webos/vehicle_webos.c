@@ -83,7 +83,7 @@ vehicle_webos_gps_update(struct vehicle_priv *priv, PDL_Location *location)
 	struct timeval tv;
 	gettimeofday(&tv,NULL);
 
-	priv->delta = (unsigned int)difftime(tv.tv_sec, priv->fix_time);
+	priv->delta = (int)difftime(tv.tv_sec, priv->fix_time);
 	dbg(2,"delta(%i)\n",priv->delta);
 	priv->fix_time = tv.tv_sec;
 	priv->geo.lat = location->latitude;
@@ -120,13 +120,13 @@ vehicle_webos_timeout_callback(struct vehicle_priv *priv)
 	struct timeval tv;
 	gettimeofday(&tv,NULL);
 
-	if (priv->fix_time) {
+	if (priv->fix_time && priv->delta) {
 		int delta = (int)difftime(tv.tv_sec, priv->fix_time);
 
 		if (delta >= priv->delta*2) {
 			dbg(1, "GPS timeout triggered cb(%p) delta(%d)\n", priv->timeout_cb, delta);
 
-			priv->delta = 0;
+			priv->delta = -1;
 
 			callback_list_call_attr_0(priv->cbl, attr_position_coord_geo);
 		}
@@ -234,7 +234,7 @@ vehicle_webos_position_attr_get(struct vehicle_priv *priv,
 
 			break;
 		case attr_position_fix_type:
-			if (priv->delta == 0 || priv->radius == 0.0)
+			if (priv->delta <= 0 || priv->radius == 0.0)
 				attr->u.num = 0;	// strength = 1
 			else if (priv->radius > 20.0)
 				attr->u.num = 1;	// strength >= 2
@@ -243,7 +243,7 @@ vehicle_webos_position_attr_get(struct vehicle_priv *priv,
 
 			break;
 		case attr_position_sats_used:
-			if (priv->delta == 0)
+			if (priv->delta <= 0)
 				attr->u.num = 0;
 			else if (priv->radius <= 6.0 )
 				attr->u.num = 6;	// strength = 5

@@ -167,6 +167,7 @@ vehicle_webos_parse_nmea(struct vehicle_priv *priv, char *buffer)
 		gettimeofday(&tv,NULL);
 
 		priv->delta = (unsigned int)difftime(tv.tv_sec, priv->fix_time);
+		priv->fix_time = tv.tv_sec;
 		dbg(2,"delta(%i)\n",priv->delta);
 	}
 
@@ -261,6 +262,7 @@ vehicle_webos_parse_nmea(struct vehicle_priv *priv, char *buffer)
 			priv->speed = g_ascii_strtod( item[7], NULL );
 			priv->speed *= 1.852;
 
+#if 0
 			struct tm tm;
 			char time[13];
 
@@ -269,7 +271,6 @@ vehicle_webos_parse_nmea(struct vehicle_priv *priv, char *buffer)
 			strptime(time,"%H%M%S%d%m%y",&tm);
 
 			priv->fix_time = mktime(&tm);
-#if 0
 			sscanf(item[9], "%02d%02d%02d",
 				&priv->fixday,
 				&priv->fixmonth,
