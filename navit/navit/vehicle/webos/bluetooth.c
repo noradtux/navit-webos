@@ -434,8 +434,21 @@ vehicle_webos_spp_handle_read(PDL_ServiceParameters *params, void *user)
 		dbg(0,"Overflow. Most likely wrong baud rate or no nmea protocol\n");
 		priv->buffer_pos = 0;
 	}
-	if (rc && priv->delta)
-		callback_list_call_attr_0(priv->cbl, attr_position_coord_geo);
+	if (rc && priv->delta) {
+		SDL_Event event;
+		SDL_UserEvent userevent;
+
+		userevent.type = SDL_USEREVENT;
+		userevent.code = PDL_GPS_UPDATE;
+		userevent.data1 = NULL;
+		userevent.data2 = NULL;
+
+		event.type = SDL_USEREVENT;
+		event.user = userevent;
+
+		SDL_PushEvent(&event);
+
+	}
 
 	vehicle_webos_spp_init_read(priv, buffer_size - priv->buffer_pos - 1);
 }
@@ -535,7 +548,10 @@ vehicle_webos_spp_notify(PDL_ServiceParameters *params, void *user)
 		}
 	}
 	else if(strcmp(notification,"notifndisconnected") == 0) {
+		snprintf(parameters, sizeof(parameters), "{\"instanceId\":%i}",priv->spp_instance_id);
+		mlPDL_ServiceCall("palm://com.palm.service.bluetooth.spp/close", parameters);
 		priv->spp_instance_id = 0;
+		vehicle_webos_init_pdl_locationtracking(priv, 1);
 	}
 
 
