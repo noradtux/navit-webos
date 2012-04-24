@@ -220,7 +220,6 @@ file_http_header(struct file *f, char *header)
 struct file *
 file_create(char *name, struct attr **options)
 {
-	struct stat stat;
 	struct file *file= g_new0(struct file,1);
 	struct attr *attr;
 	int open_flags=O_LARGEFILE|O_BINARY;
@@ -334,7 +333,7 @@ file_mmap(struct file *file)
 	int mmap_size=file->size;
 #endif
 #ifdef HAVE_API_WIN32_BASE
-	file->begin = (char*)mmap_readonly_win32( file->name, &file->map_handle, &file->map_file );
+	file->begin = (unsigned char*)mmap_readonly_win32( file->name, &file->map_handle, &file->map_file );
 #else
 	file->begin=mmap(NULL, mmap_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, file->fd, 0);
 	dbg_assert(file->begin != NULL);

@@ -89,7 +89,7 @@ process_boundaries_setup(FILE *boundaries, struct relations *relations)
 		while ((member=item_bin_get_attr(ib, attr_osm_member, member))) {
 			long long wayid;
 			int read=0;
-			if (sscanf(member,"2:%Ld:%n",&wayid,&read) >= 1) {
+			if (sscanf(member,"2:"LONGLONG_FMT":%n",&wayid,&read) >= 1) {
 				char *rolestr=member+read;
 				enum geom_poly_segment_type role;
 				if (!strcmp(rolestr,"outer") || !strcmp(rolestr,"exclave"))
@@ -196,7 +196,7 @@ process_boundaries_insert(GList *list, struct boundary *boundary)
 static GList *
 process_boundaries_finish(GList *boundaries_list)
 {
-	GList *l,*sl,*l2,*ln;
+	GList *l,*sl;
 	GList *ret=NULL;
 	l=boundaries_list;
 	while (l) {
@@ -265,6 +265,7 @@ process_boundaries_finish(GList *boundaries_list)
 	l=boundaries_list;
 	while (l) {
 		struct boundary *boundary=l->data;
+		GList *l2,*ln;
 		ln=l2=g_list_next(l);
 		while (l2) {
 			struct boundary *boundary2=l2->data;
