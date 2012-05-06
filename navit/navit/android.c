@@ -121,7 +121,7 @@ JNIEXPORT void JNICALL
 Java_org_navitproject_navit_NavitTimeout_TimeoutCallback( JNIEnv* env, jobject thiz, int id)
 {
 	void (*event_handler)(void *) = *(void **)id;
-	dbg(0,"enter %p %p\n",thiz, (void *)id);
+	dbg(1,"enter %p %p\n",thiz, (void *)id);
 	event_handler((void*)id);
 }
 
@@ -259,7 +259,46 @@ Java_org_navitproject_navit_NavitGraphics_CallbackMessageChannel( JNIEnv* env, j
 		navit_draw(attr.u.navit);
 		break;
 	case 6:
-		break;
+	{
+		struct mapset *ms = navit_get_mapset(attr.u.navit);
+		struct attr type, name, data, *attrs[4];
+		char *map_location=(*env)->GetStringUTFChars(env, str, NULL);
+		dbg(0,"*****string=%s\n",map_location);
+		type.type=attr_type;
+		type.u.str="binfile";
+
+		data.type=attr_data;
+		data.u.str=g_strdup(map_location);
+
+		name.type=attr_name;
+		name.u.str=g_strdup(map_location);
+
+		attrs[0]=&type; attrs[1]=&data; attrs[2]=&name; attrs[3]=NULL;
+
+		struct map * new_map = map_new(NULL, attrs);
+		struct attr map_a;
+		map_a.type=attr_map;
+		map_a.u.map=new_map;
+		mapset_add_attr(ms, &map_a);
+		navit_draw(attr.u.navit);
+		(*env)->ReleaseStringUTFChars(env, str, map_location);
+	}
+	break;
+	case 7:
+	{
+		struct mapset *ms = navit_get_mapset(attr.u.navit);
+		struct attr map_r;
+		char *map_location=(*env)->GetStringUTFChars(env, str, NULL);
+		struct map * delete_map =  mapset_get_map_by_name(ms, map_location);
+
+		dbg(0,"delete map %s (%p)", map_location, delete_map);
+		map_r.type=attr_map;
+		map_r.u.map=delete_map;
+		mapset_remove_attr(ms, &map_r);
+		navit_draw(attr.u.navit);
+		(*env)->ReleaseStringUTFChars(env, str, map_location);
+	}
+	break;
 	case 5:
 		// call a command (like in gui)
 		s=(*env)->GetStringUTFChars(env, str, NULL);

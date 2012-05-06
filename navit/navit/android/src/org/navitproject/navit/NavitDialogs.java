@@ -1,7 +1,6 @@
 package org.navitproject.navit;
 
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
@@ -24,7 +23,7 @@ public class NavitDialogs extends Handler{
 	public static final int           DIALOG_SEARCHRESULTS_WAIT        = 3;
 
 	// dialog messages
-	static final int MSG_REMOVE_PROGRESS_BAR   = 0;
+	static final int MSG_MAP_DOWNLOAD_FINISHED   = 0;
 	static final int MSG_PROGRESS_BAR          = 1;
 	static final int MSG_TOAST                 = 2;
 	static final int MSG_TOAST_LONG            = 3;
@@ -41,9 +40,9 @@ public class NavitDialogs extends Handler{
 	private SearchResultsThreadSpinner        searchresultsSpinner     = null;
 	private NavitMapDownloader                mapdownloader            = null;
 
-	private Activity mActivity;
+	private Navit mActivity;
 
-	public NavitDialogs(Activity activity) {
+	public NavitDialogs(Navit activity) {
 		super();
 		mActivity = activity;
 		mHandler = this;
@@ -70,11 +69,16 @@ public class NavitDialogs extends Handler{
 	{
 		switch (msg.what)
 		{
-		case MSG_REMOVE_PROGRESS_BAR :
+		case MSG_MAP_DOWNLOAD_FINISHED :
+		{
 			// dismiss dialog, remove dialog
 			mActivity.dismissDialog(DIALOG_MAPDOWNLOAD);
 			mActivity.removeDialog(DIALOG_MAPDOWNLOAD);
+			Message activate_map_msg = Message.obtain(Navit.N_NavitGraphics.callback_handler, NavitGraphics.msg_type.CLB_LOAD_MAP.ordinal());
+			activate_map_msg.setData(msg.getData());
+			activate_map_msg.sendToTarget();
 			break;
+		}
 		case MSG_PROGRESS_BAR :
 			// change progressbar values
 			mapdownloader_dialog.setMax(msg.getData().getInt("value1"));
@@ -105,19 +109,16 @@ public class NavitDialogs extends Handler{
 			break;
 		case MSG_START_MAP_DOWNLOAD:
 		{
-			int map_selected = msg.arg1;
-			int map_slot     = msg.arg2;
-			Log.d("Navit", "PRI id=" + map_selected);
+			int download_map_id = msg.arg1;
+			Log.d("Navit", "PRI id=" + download_map_id);
 			// set map id to download
 
-			int download_map_id = NavitMapDownloader.OSM_MAP_NAME_ORIG_ID_LIST[map_selected];
 			// show the map download progressbar, and download the map
 			if (download_map_id > -1)
 			{
 				mActivity.showDialog(NavitDialogs.DIALOG_MAPDOWNLOAD);
 
-				mapdownloader = new NavitMapDownloader(download_map_id
-						, NavitDialogs.DIALOG_MAPDOWNLOAD, map_slot);
+				mapdownloader = new NavitMapDownloader(download_map_id, NavitDialogs.DIALOG_MAPDOWNLOAD);
 				mapdownloader.start();
 			}
 		}
