@@ -145,6 +145,15 @@ vehicle_new(struct attr *parent, struct attr **attrs)
 void
 vehicle_destroy(struct vehicle *this_)
 {
+	/* flush all logfiles on exit to avoid loss of yet unwritten data*/
+	GList *ll, *l;
+	gpointer key;
+	for(ll=l=g_hash_to_list_keys(this_->log_to_cb);l;l=g_list_next(l)) {
+		key=l->data;
+		log_write(key,"",0,log_flag_force_flush);
+	}
+	g_list_free(ll);
+
 	if (this_->animate_callback) {
 		callback_destroy(this_->animate_callback);
 		event_remove_timeout(this_->animate_timer);
