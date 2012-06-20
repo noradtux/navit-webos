@@ -393,6 +393,10 @@ struct graphics_font * graphics_named_font_new(struct graphics *gra, char *font,
 	return this_;
 }
 
+void graphics_font_destroy(struct graphics_font *gra_font) {
+	gra_font->meth.font_destroy(gra_font->priv);
+	g_free(gra_font);
+}
 
 /**
  * Destroy graphics
@@ -424,6 +428,7 @@ void graphics_free(struct graphics *gra)
 		g_hash_table_destroy(gra->image_cache_hash);
 	}
 
+	attr_list_free(gra->attrs);
         graphics_gc_destroy(gra->gc[0]);
         graphics_gc_destroy(gra->gc[1]);
         graphics_gc_destroy(gra->gc[2]);
