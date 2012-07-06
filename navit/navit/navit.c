@@ -1434,7 +1434,7 @@ navit_new(struct attr *parent, struct attr **attrs)
 
 	this_->messages = messagelist_new(attrs);
 
-	dbg(0,"return %p\n",this_);
+	dbg(1,"return %p\n",this_);
 	
 	return this_;
 }
@@ -1685,7 +1685,7 @@ navit_former_destinations_active(struct navit *this_)
 }
 
 struct map* read_former_destinations_from_file(){
-	struct attr type, data, flags, *attrs[4];
+	struct attr type, data, no_warn, flags, *attrs[5];
 	char *destination_file = bookmarks_get_destination_file(FALSE);
 	struct map *m;
 
@@ -1695,10 +1695,14 @@ struct map* read_former_destinations_from_file(){
 	data.type=attr_data;
 	data.u.str=destination_file;
 
+	no_warn.type=attr_no_warning_if_map_file_missing;
+	no_warn.u.num=1;
+
 	flags.type=attr_flags;
 	flags.u.num=1;
 
-	attrs[0]=&type; attrs[1]=&data; attrs[2]=&flags; attrs[3]=NULL;
+	attrs[0]=&type; attrs[1]=&data; attrs[2]=&flags;
+	attrs[3]=&no_warn; attrs[4]=NULL;
 
 	m=map_new(NULL, attrs);
 	g_free(destination_file);
@@ -2054,6 +2058,9 @@ navit_init(struct navit *this_)
 			}
 		}
 		navit_add_former_destinations_from_file(this_);
+	} else {
+		dbg(0, "FATAL: No mapset available. Please add a (valid) mapset to your configuration.\n");
+		exit(1);
 	}
 	if (this_->route) {
 		struct attr callback;
@@ -3343,7 +3350,7 @@ struct navit *
 navit_ref(struct navit *this_)
 {
 	this_->refcount++;
-	dbg(0,"refcount %d\n",this_->refcount);
+	dbg(1,"refcount %d\n",this_->refcount);
 	return this_;
 }
 
@@ -3351,7 +3358,7 @@ void
 navit_unref(struct navit *this_)
 {
 	this_->refcount--;
-	dbg(0,"refcount %d\n",this_->refcount);
+	dbg(1,"refcount %d\n",this_->refcount);
 	if (this_->refcount <= 0)
 		navit_destroy(this_);
 }
