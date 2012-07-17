@@ -255,7 +255,6 @@ static struct object_func object_funcs[] = {
 	{ attr_image,      NEW(image_new)},
 	{ attr_itemgra,    NEW(itemgra_new),  NULL, NULL, NULL, NULL, ADD(itemgra_add_attr)},
 	{ attr_layer,      NEW(layer_new),    NULL, NULL, NULL, NULL, ADD(layer_add_attr)},
-	{ attr_layout,     NEW(layout_new),   NULL, NULL, NULL, NULL, ADD(layout_add_attr)},
 	{ attr_log,        NEW(log_new)},
 	{ attr_navigation, NEW(navigation_new), GET(navigation_get_attr)},
 	{ attr_osd,        NEW(osd_new),  GET(osd_get_attr), NULL, NULL, SET(osd_set_attr) },
@@ -267,7 +266,6 @@ static struct object_func object_funcs[] = {
 	{ attr_route,      NEW(route_new), GET(route_get_attr), NULL, NULL, SET(route_set_attr), ADD(route_add_attr), REMOVE(route_remove_attr)},
 	{ attr_speech,     NEW(speech_new), GET(speech_get_attr), NULL, NULL, SET(speech_set_attr)},
 	{ attr_text,       NEW(text_new)},
-	{ attr_vehicleprofile, NEW(vehicleprofile_new),  GET(vehicleprofile_get_attr), NULL, NULL, SET(vehicleprofile_set_attr), ADD(vehicleprofile_add_attr) },
 };
 
 struct object_func *
@@ -275,6 +273,8 @@ object_func_lookup(enum attr_type type)
 {
 	int i;
 	switch (type) {
+	case attr_layout:
+		return &layout_func;
 	case attr_map:
 		return &map_func;
 	case attr_maps:
@@ -287,6 +287,8 @@ object_func_lookup(enum attr_type type)
 		return &tracking_func;
 	case attr_vehicle:
 		return &vehicle_func;
+	case attr_vehicleprofile:
+		return &vehicleprofile_func;
 	default:
 		for (i = 0 ; i < sizeof(object_funcs)/sizeof(struct object_func); i++) {
 			if (object_funcs[i].type == type)

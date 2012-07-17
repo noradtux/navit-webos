@@ -6,7 +6,7 @@ include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/support")
 
 # navit cre
 set(NAVIT_SRC announcement.c atom.c attr.c cache.c callback.c command.c compass.c config_.c coord.c country.c data_window.c debug.c 
-   event.c file.c graphics.c gui.c item.c layout.c log.c main.c map.c maps.c obj_filter.c
+   event.c file.c graphics.c gui.c item.c layout.c log.c main.c map.c maps.c 
    linguistics.c mapset.c maptype.c menu.c messages.c bookmarks.c navit.c navigation.c osd.c param.c phrase.c plugin.c popup.c
    profile.c projection.c roadprofile.c route.c routech.c search.c speech.c start_real.c sunriset.c transform.c track.c 
    util.c vehicle.c vehicleprofile.c xmlconfig.c )
@@ -86,6 +86,7 @@ if(NOT ANDROID)
       add_custom_command(OUTPUT resources/share COMMAND mkdir -p resources/share)
       set_source_files_properties(resources/share resources/Icon.png resources/Default.png PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
       set_target_properties(navit PROPERTIES MACOSX_BUNDLE TRUE)
+      set_target_properties(navit PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist)
       add_dependencies(navit navit_config_xml_resource)
       add_dependencies(navit images_resource)
       add_dependencies(navit locale_resource)
