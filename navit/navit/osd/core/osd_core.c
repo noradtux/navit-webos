@@ -81,7 +81,7 @@ struct osd_priv_common {
 struct odometer;
 
 int set_std_osd_attr(struct osd_priv_common*opc, struct attr*the_attr);
-static void osd_odometer_reset(struct osd_priv_common *opc);
+static void osd_odometer_reset(struct osd_priv_common *opc, int force);
 static void osd_cmd_odometer_reset(struct navit *this, char *function, struct attr **in, struct attr ***out, int *valid);
 static void osd_odometer_draw(struct osd_priv_common *opc, struct navit *nav, struct vehicle *v);
 static struct osd_text_item * oti_new(struct osd_text_item * parent);
@@ -524,7 +524,7 @@ osd_cmd_odometer_reset(struct navit *this, char *function, struct attr **in, str
           GList* list = odometer_list;
           while(list) {
             if(!strcmp(((struct odometer*)((struct osd_priv_common *)(list->data))->data)->name,in[0]->u.str)) {
-              osd_odometer_reset(list->data);
+              osd_odometer_reset(list->data,1);
 	          osd_odometer_draw(list->data,this,NULL);
             }
             list = g_list_next(list);
@@ -775,11 +775,11 @@ static void osd_odometer_draw(struct osd_priv_common *opc, struct navit *nav, st
 
 
 static void
-osd_odometer_reset(struct osd_priv_common *opc)
+osd_odometer_reset(struct osd_priv_common *opc, int force)
 {
   struct odometer *this = (struct odometer *)opc->data;
 
-  if(!this->bDisableReset) {
+  if(!this->bDisableReset || force) {
     this->bActive         = 0;
     this->sum_dist        = 0;
     this->sum_time        = 0;
@@ -822,7 +822,7 @@ osd_odometer_click(struct osd_priv_common *opc, struct navit *nav, int pressed, 
   this->bActive ^= 1;  //toggle active flag
 
   if (curr_time-double_click_timewin <= this->last_click_time) { //double click handling
-    osd_odometer_reset(opc);
+    osd_odometer_reset(opc,0);
   }
 
   this->last_click_time = curr_time;
@@ -1087,13 +1087,9 @@ osd_cmd_interface_set_attr(struct osd_priv_common *opc, struct attr* attr)
 {
 	struct cmd_interface *this_ = (struct cmd_interface *)opc->data;
 
-	struct navit* nav;
-
 	if(NULL==attr || NULL==this_) {
 		return 0;
 	}
-
-	nav = opc->osd_item.navit;
 
 	if(attr->type == attr_status_text) {
 		if(this_->text) {
@@ -1975,7 +1971,7 @@ osd_speed_cam_draw(struct osd_priv_common *opc, struct navit *navit, struct vehi
   struct osd_speed_cam *this_ = (struct osd_speed_cam *)opc->data;
 
   struct attr position_attr,vehicle_attr,imperial_attr;
-  struct point p, bbox[4];
+  struct point bbox[4];
   struct attr speed_attr;
   struct vehicle* curr_vehicle = v;
   struct coord curr_coord;
@@ -2127,8 +2123,6 @@ osd_speed_cam_draw(struct osd_priv_common *opc, struct navit *navit, struct vehi
       str_replace(buffer,buffer2,"${speed_limit}",spd_str);
   
       graphics_get_text_bbox(opc->osd_item.gr, opc->osd_item.font, buffer, 0x10000, 0, bbox, 0);
-      p.x=(opc->osd_item.w-bbox[2].x)/2;
-      p.y = opc->osd_item.h-opc->osd_item.h/10;
       curr_color = this_->orange;
       //tolerance is +-20 degrees
       if(
@@ -2705,7 +2699,6 @@ osd_text_draw(struct osd_priv_common *opc, struct navit *navit, struct vehicle *
 	struct attr attr, vehicle_attr, maxspeed_attr, imperial_attr;
 	struct navigation *nav = NULL;
 	struct tracking *tracking = NULL;
-	struct route *route = NULL;
 	struct map *nav_map = NULL;
 	struct map_rect *nav_mr = NULL;
 	struct item *item;
@@ -2771,7 +2764,6 @@ osd_text_draw(struct osd_priv_common *opc, struct navit *navit, struct vehicle *
 		} else if (oti->section == attr_tracking) {
 			if (navit) {
 				tracking = navit_get_tracking(navit);
-				route = navit_get_route(navit);
 			}
 			if (tracking) {
 				item=tracking_get_current_item(tracking);
