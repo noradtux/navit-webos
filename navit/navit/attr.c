@@ -661,7 +661,6 @@ attr_list_dup(struct attr **attrs)
 	return ret;
 }
 
-
 int
 attr_from_line(char *line, char *name, int *pos, char *val_ret, char *name_ret)
 {
