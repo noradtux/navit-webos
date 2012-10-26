@@ -2978,7 +2978,8 @@ navit_vehicle_update(struct navit *this_, struct navit_vehicle *nv)
 			(nv->follow_curr == 1 || !transform_within_border(this_->trans_cursor, &cursor_pnt, this_->border)))
 			navit_set_center_cursor_draw(this_);
 		else
-			navit_vehicle_draw(this_, nv, pnt);
+			//navit_vehicle_draw(this_, nv, pnt);
+			navit_draw_async(this_, 1);
 
 		if (nv->follow_curr > 1)
 			nv->follow_curr--;
