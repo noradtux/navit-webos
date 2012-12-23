@@ -319,11 +319,11 @@ eval_value(struct context *ctx, struct result *res) {
 	while (g_ascii_isspace(*op)) {
 		op++;
 	}
-	if ((op[0] >= 'a' && op[0] <= 'z') || op[0] == '_') {
+	if ((op[0] >= 'a' && op[0] <= 'z') || (op[0] >= 'A' && op[0] <= 'Z') || op[0] == '_') {
 		res->attr.type=attr_none;
 		res->var=op;
 		for (;;) {
-			while ((op[0] >= 'a' && op[0] <= 'z') || (op[0] >= '0' && op[0] <= '9') || op[0] == '_') {
+			while ((op[0] >= 'a' && op[0] <= 'z') || (op[0] >= 'A' && op[0] <= 'Z') || (op[0] >= '0' && op[0] <= '9') || op[0] == '_') {
 				res->varlen++;
 				op++;
 			}
@@ -363,6 +363,8 @@ eval_value(struct context *ctx, struct result *res) {
 	}
 	if (op[0] == '"') {
 		do {
+			if (op[0] == '\\' && op[1] == '"')
+				op++;
 			op++;
 		} while (op[0] && op[0] != '"');
 		res->attr.type=attr_type_string_begin;
