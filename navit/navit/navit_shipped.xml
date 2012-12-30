@@ -73,11 +73,12 @@ Navigation</text></img>
 				<img src='gui_maps' onclick='setting_maps()'><text>Maps</text></img>
 				<!-- <a href='#Settings Maps'><img src='gui_maps'><text>Maps</text></img></a> -->
 				<img src='gui_vehicle' onclick='setting_vehicle()'><text>Vehicle</text></img>
+				<!-- <a href='#Settings Vehicles'><img src='gui_vehicle'><text>Vehicle</text></img></a> -->
 				<img src='gui_rules' onclick='setting_rules()'><text>Rules</text></img>
 			</a>
 			<a name='Settings Display'><text>Display</text>
 				<img src='gui_display' onclick='setting_layout()'><text>Layout</text></img>
-				<!-- <a href='#Settings Layout'><img src='gui_display'><text>Layout</text></img></a> -->
+				<!-- <a href='#Settings Layouts'><img src='gui_display'><text>Layout</text></img></a> -->
 				<img cond='fullscreen==0' src='gui_fullscreen' onclick='fullscreen=1'><text>Fullscreen</text></img>
 				<img cond='fullscreen==1' src='gui_leave_fullscreen' onclick='fullscreen=0'><text>Window Mode</text></img>
 				<img cond='navit.pitch==0' src='gui_map' onclick='navit.pitch=pitch;redraw_map();back_to_map()'><text>3D</text></img>
@@ -98,11 +99,81 @@ Waypoint</text></img>
 			<a name='Map Point'><text>Map Point</text>
 				<script>position(click_coord_geo,_("Map Point"),8|16|32|64|256)</script>
 			</a>
-			<a name='Settings Layout' class='clist' refresh_cond='navit.layout'><text>Layout</text>
-				<script>layout_page()</script>
+			<a name='Settings Layouts' class='clist' refresh_cond='navit.layout'><text>Layout</text>
+				<script>
+					foreach(layout;navit.layout)
+						write("&lt;img class='centry'",
+							" src='", navit.layout==layout?"gui_active":"gui_inactive", "'",
+							" onclick='set(", E("navit.layout=navit.layout[@name==*]"), ",E(",E(layout.name), "))'",
+							"&gt;",
+							layout.name,
+							"&lt;/img&gt;"
+						);
+				</script>
 			</a>
 			<a name='Settings Maps' class='clist'><text>Maps</text>
-				<script>maps_page()</script>
+				<script>
+					foreach(map;navit.mapset.map)
+						if (map.description)
+							write("&lt;img class='centry'",
+								" src='", map.active?"gui_active":"gui_inactive", "'",
+								" onclick='set(", E("navit.mapset.map[@description=="+E(map.description)+"].active=*"), ",", !map.active, ");redraw_map();refresh()'",
+								"&gt;",
+								map.description,
+								"&lt;/img&gt;"
+							);
+						else
+							write("&lt;img class='centry'",
+								" src='", map.active?"gui_active":"gui_inactive", "'",
+								" onclick='set(", E("navit.mapset.map[@data=="+E(map.data)+"].active=*"), ",", !map.active, ");redraw_map();refresh()'",
+								"&gt;",
+								map.type,":",map.data,
+								"&lt;/img&gt;"
+							);
+
+
+				</script>
+			</a>
+			<a name='Settings Vehicles' class='clist'><text>Vehicle</text>
+				<script>
+					foreach(vehicle;navit.vehicle)
+						write("&lt;img class='centry'",
+							" src='", navit.vehicle==vehicle?"gui_active":"gui_inactive", "'",
+							" onclick='name=", E(vehicle.name), ";menu(", E("#Settings Vehicle"), ")'",
+							"&gt;",
+							vehicle.name,
+							"&lt;/img&gt;"
+						);
+				</script>
+			</a>
+			<a name='Settings Vehicle' class='clist'><script>write(name)</script>
+				<script>
+					foreach(vehicle;navit.vehicle)
+						if (vehicle.name == name) {
+							if (vehicle!=navit.vehicle)
+								write("&lt;img class='centry'",
+								" src='gui_active' ",
+								" onclick='set(", E("navit.vehicle=navit.vehicle[@name==*]"), ",E(", E(name), "));refresh()'",
+								"&gt;",
+								"Set as active",
+								"&lt;/img&gt;"
+							);
+							foreach(vehicleprofile;navit.vehicleprofile)
+								write("&lt;img class='centry'",
+								" src='", vehicle.profilename==vehicleprofile.name?"gui_active":"gui_inactive", "'",
+								" onclick='set(", E("navit.vehicle[@name=="+E(name)+"].profilename=*"), ",E(", E(vehicleprofile.name), "));refresh()'",
+								"&gt;",
+								vehicleprofile.name,
+								"&lt;/img&gt;"
+								);
+						}
+				</script>
+			</a>
+			<a name='Satellite Status' class='clist'><text>Satellite Status</text>
+				<script>satellite_status_page()</script>
+			</a>
+			<a name='NMEA Data' class='clist'><text>NMEA Data</text>
+				<script>nmea_data_page()</script>
 			</a>
 			</html>
 		]]></gui>

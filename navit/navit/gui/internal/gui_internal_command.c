@@ -23,6 +23,7 @@
 #include "search.h"
 #include "route.h"
 #include "vehicle.h"
+#include "vehicleprofile.h"
 #include "layout.h"
 #include "util.h"
 #include "gui_internal.h"
@@ -77,15 +78,42 @@ gui_internal_coordinates(struct pcoord *pc, char sep)
 static void
 gui_internal_cmd_escape(struct gui_priv *this, char *function, struct attr **in, struct attr ***out, int *valid)
 {
-	if (in && in[0] && ATTR_IS_STRING(in[0]->type) && out) {
-		struct attr escaped;
-		escaped.type=in[0]->type;
-		escaped.u.str=g_strdup_printf("\"%s\"",in[0]->u.str);
-		dbg(1,"result %s\n",escaped.u.str);
-		*out=attr_generic_add_attr(*out, attr_dup(&escaped));
-		g_free(escaped.u.str);
+	struct attr escaped;
+	int len;
+	char *src,*dst;
+	if (!in || !in[0] || !ATTR_IS_STRING(in[0]->type)) {
+		dbg(0,"first parameter missing or wrong type\n");
+		return;
 	}
+	if (!out) {
+		dbg(0,"output missing\n");
+		return;
+	}
+	src=in[0]->u.str;
+	len=3;
+	while (*src) {
+		if (*src == '"' || *src == '\\')
+			len++;
+		len++;
+		src++;
+	}
+	escaped.type=in[0]->type;
+	src=in[0]->u.str;
+	dst=g_malloc(len);
+	escaped.u.str=dst;
+	*dst++='"';
+	while (*src) {
+		if (*src == '"' || *src == '\\')
+			*dst++='\\';
+		*dst++=*src++;
+	}
+	*dst++='"';
+	*dst++='\0';
+	dbg(1,"in %s result %s\n",in[0]->u.str,escaped.u.str);
+	*out=attr_generic_add_attr(*out, attr_dup(&escaped));
+	g_free(escaped.u.str);
 }
+
 static void
 gui_internal_cmd2_about(struct gui_priv *this, char *function, struct attr **in, struct attr ***out, int *valid)
 {
@@ -285,41 +313,6 @@ gui_internal_cmd2_setting_rules(struct gui_priv *this, char *function, struct at
 }
 
 static void
-gui_internal_cmd_maps_page(struct gui_priv *this, char *function, struct attr **in, struct attr ***out, int *valid)
-{
-	struct attr mapset,map;
-	struct attr_iter *iter;
-	char *document=g_strdup("<html>");
-
-	navit_get_attr(this->nav, attr_mapset, &mapset, NULL);
-	iter=mapset_attr_iter_new();
-	while(mapset_get_attr(mapset.u.mapset, attr_map, &map, iter)) {
-		struct attr description,type,data,active;
-		char *attr,*val,*label;
-		if (map_get_attr(map.u.map, attr_description, &description, NULL)) {
-			label=g_strdup(description.u.str);
-			val=description.u.str;
-			attr="description";
-		} else {
-			if (!map_get_attr(map.u.map, attr_type, &type, NULL))
-				type.u.str="";
-			if (!map_get_attr(map.u.map, attr_data, &data, NULL))
-				data.u.str="";
-			val=data.u.str;
-			attr="data";
-			label=g_strdup_printf("%s:%s",type.u.str,data.u.str);
-		}
-		if (!map_get_attr(map.u.map, attr_active, &active, NULL))
-			active.u.num=1;
-		document=g_strconcat_printf(document, "<img class='centry' src='%s' onclick='set(\"navit.mapset.map[@%s==\\\"%s\\\"].active=*\",%d);redraw_map();refresh()'>%s</img>",active.u.num ? "gui_active":"gui_inactive",attr,val,!active.u.num,label);
-	}
-	mapset_attr_iter_destroy(iter);
-	document=g_strconcat_printf(document, "</html>");
-	gui_internal_html_parse_text(this, document);
-	g_free(document);
-}
-
-static void
 gui_internal_cmd2_setting_maps(struct gui_priv *this, char *function, struct attr **in, struct attr ***out, int *valid)
 {
 	struct attr attr, on, off, description, type, data, url, active;
@@ -363,27 +356,6 @@ gui_internal_cmd2_setting_maps(struct gui_priv *this, char *function, struct att
 	navit_attr_iter_destroy(iter);
 	gui_internal_menu_render(this);
 
-}
-
-static void
-gui_internal_cmd_layout_page(struct gui_priv *this, char *function, struct attr **in, struct attr ***out, int *valid)
-{
-	struct attr layout,clayout;
-	struct attr_iter *iter;
-	char *document=g_strdup("<html>");
-
-	navit_get_attr(this->nav, attr_layout, &clayout, NULL);
-	iter=navit_attr_iter_new();
-	while(navit_get_attr(this->nav, attr_layout, &layout, iter)) {
-		struct attr name;
-		if (!layout_get_attr(layout.u.layout, attr_name, &name, NULL))
-			name.u.str="Unknown";
-		document=g_strconcat_printf(document, "<img class='centry' src='%s' onclick='set(\"navit.layout=navit.layout[@name==*]\",E(\"%s\"))'>%s</img>",layout.u.layout == clayout.u.layout ? "gui_active":"gui_inactive",name.u.str,name.u.str);
-	}
-	navit_attr_iter_destroy(iter);
-	document=g_strconcat_printf(document, "</html>");
-	gui_internal_html_parse_text(this, document);
-	g_free(document);
 }
 
 static void
@@ -918,23 +890,49 @@ gui_internal_cmd2_quit(struct gui_priv *this, char *function, struct attr **in, 
 static void
 gui_internal_cmd_write(struct gui_priv * this, char *function, struct attr **in, struct attr ***out, int *valid)
 {
-	char *str=NULL,*str2=NULL;
+	char *str=NULL;
 	dbg(1,"enter %s %p %p %p\n",function,in,out,valid);
-	if (!in || !in[0])
+	if (!in)
 		return;
-	dbg(1,"%s\n",attr_to_name(in[0]->type));
-	if (ATTR_IS_STRING(in[0]->type)) {
-		str=in[0]->u.str;
-	}
-	if (ATTR_IS_COORD_GEO(in[0]->type)) {
-		str=str2=coordinates_geo(in[0]->u.coord_geo, '\n');
+	while (*in) {
+		dbg(1,"%s\n",attr_to_name((*in)->type));
+		if (ATTR_IS_STRING((*in)->type)) {
+			str=g_strconcat_printf(str,"%s",(*in)->u.str);
+		}
+		if (ATTR_IS_COORD_GEO((*in)->type)) {
+			char *str2=coordinates_geo((*in)->u.coord_geo, '\n');
+			str=g_strconcat_printf(str,"%s",str2);
+			g_free(str2);
+		}
+		if (ATTR_IS_INT((*in)->type)) {
+			str=g_strconcat_printf(str,"%d",(*in)->u.num);
+		}
+		in++;
 	}
 	if (str) {
 		str=g_strdup_printf("<html>%s</html>\n",str);
+#if 0
+		dbg(0,"%s\n",str);
+#endif
 		gui_internal_html_parse_text(this, str);
 	}
 	g_free(str);
-	g_free(str2);
+}
+
+static void
+gui_internal_cmd_debug(struct gui_priv * this, char *function, struct attr **in, struct attr ***out, int *valid)
+{
+	char *str;
+	dbg(0,"begin\n");
+	if (in) {
+		while (*in) {
+			str=attr_to_text(*in, NULL, 0);
+			dbg(0,"%s:%s\n",attr_to_name((*in)->type),str);
+			in++;
+			g_free(str);
+		}
+	}
+	dbg(0,"done\n");
 }
 
 static void
@@ -995,12 +993,11 @@ static struct command_table commands[] = {
 	{"back",command_cast(gui_internal_cmd2_back)},
 	{"back_to_map",command_cast(gui_internal_cmd2_back_to_map)},
 	{"bookmarks",command_cast(gui_internal_cmd2)},
+	{"debug",command_cast(gui_internal_cmd_debug)},
 	{"formerdests",command_cast(gui_internal_cmd2)},
 	{"get_data",command_cast(gui_internal_get_data)},
-	{"layout_page",command_cast(gui_internal_cmd_layout_page)},
 	{"locale",command_cast(gui_internal_cmd2)},
 	{"log",command_cast(gui_internal_cmd_log)},
-	{"maps_page",command_cast(gui_internal_cmd_maps_page)},
 	{"menu",command_cast(gui_internal_cmd_menu2)},
 	{"position",command_cast(gui_internal_cmd2_position)},
 	{"pois",command_cast(gui_internal_cmd2)},
