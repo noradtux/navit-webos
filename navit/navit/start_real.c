@@ -82,7 +82,6 @@ int main_real(int argc, const char **argv)
 	main_argc=argc;
 	main_argv=argv;
 
-
 #ifdef HAVE_GLIB
 	event_glib_init();
 #else
@@ -196,6 +195,7 @@ int main_real(int argc, const char **argv)
 		li = g_list_next(li);
 	}
 
+	dbg(0,"Loading %s\n",config_file);
 	if (!config_load(config_file, &error)) {
 		dbg(0, _("Error parsing config file '%s': %s\n"), config_file, error ? error->message : "");
 	} else {
