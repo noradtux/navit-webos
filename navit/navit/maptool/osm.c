@@ -41,7 +41,7 @@
 extern int doway2poi;
 
 static int in_way, in_node, in_relation;
-static int nodeid,wayid;
+osmid nodeid,wayid;
 long long current_id;
 
 static GHashTable *attr_hash,*country_table_hash,*attr_hash;
@@ -1442,7 +1442,7 @@ node_item_get_from_file(FILE *coords, int id, struct node_item *ret)
 void
 osm_add_way(osmid id)
 {
-	static int wayid_last;
+	static osmid wayid_last;
 
 	in_way=1;
 	wayid=id;
@@ -1456,7 +1456,7 @@ osm_add_way(osmid id)
 	debug_attr_buffer[0]='\0';
 	osmid_attr_value=id;
 	if (wayid < wayid_last && !way_hash) {
-		fprintf(stderr,"INFO: Ways out of sequence (new %d vs old %d), adding hash\n", wayid, wayid_last);
+		fprintf(stderr,"INFO: Ways out of sequence (new %lu vs old %lu), adding hash\n", wayid, wayid_last);
 		way_hash=g_hash_table_new(NULL, NULL);
 	}
 	wayid_last=wayid;
@@ -1761,7 +1761,7 @@ osm_end_node(struct maptool_osm *osm)
 			item_bin_add_attr_longlong(item_bin, attr_osm_nodeid, osmid_attr_value);
 			item_bin_add_attr_string(item_bin, attr_town_postal, postal);
 			item_bin_add_attr_string(item_bin, attr_county_name, attr_strings[attr_string_county_name]);
-			item_bin_add_attr_string(item_bin, attr_town_name, attr_strings[attr_string_label]);
+			item_bin_add_attr_string(item_bin, item_is_district(*item_bin)?attr_district_name:attr_town_name, attr_strings[attr_string_label]);
 			item_bin_write(item_bin, osm->towns);
 		}
 	}
@@ -1820,7 +1820,7 @@ osm_process_town_by_boundary(GList *bl, struct item_bin *ib, struct coord *c, st
 {
 	GList *l,*matches=boundary_find_matches(bl, c);
 	struct boundary *match=NULL;
-
+	
 	l=matches;
 	while (l) {
 		struct boundary *b=l->data;
@@ -1834,17 +1834,26 @@ osm_process_town_by_boundary(GList *bl, struct item_bin *ib, struct coord *c, st
 		}
 		l=g_list_next(l);
 	}
+
 	if (match) {
 		if (match && match->country && match->country->admin_levels) {
+			long long *nodeid=item_bin_get_attr(ib, attr_osm_nodeid, NULL);
+			long long node_id=0;
+			int end=strlen(match->country->admin_levels)+3;
+			int a;
+			int max_adm_level=0;
+
+			if(nodeid)
+				node_id=*nodeid;
+
 			l=matches;
 			while (l) {
 				struct boundary *b=l->data;
 				char *admin_level=osm_tag_value(b->ib, "admin_level");
 				char *postal=osm_tag_value(b->ib, "postal_code");
 				if (admin_level) {
-					int a=atoi(admin_level);
-					int end=strlen(match->country->admin_levels)+3;
 					char *name;
+					a=atoi(admin_level);
 					if (a > 2 && a < end) {
 						enum attr_type attr_type=attr_none;
 						switch(match->country->admin_levels[a-3]) {
@@ -1869,9 +1878,21 @@ osm_process_town_by_boundary(GList *bl, struct item_bin *ib, struct coord *c, st
 					attrs[0].type=attr_town_postal;
 					attrs[0].u.str=postal;
 				}
+				if(b->admin_centre && b->admin_centre==node_id) {
+					if(!max_adm_level || max_adm_level<a)
+						max_adm_level=a;
+				}
+				
 				l=g_list_next(l);
 			}
+
+			/* Administrative centres are not to be contained in their own districts. */
+			if(max_adm_level>0)
+				for(a=end-1;a>max_adm_level && a>2;a--)
+					attrs[a-2].type=type_none;
 		}
+		
+				
 		return match->country; 
 	} else
 		return NULL;
@@ -1953,7 +1974,10 @@ osm_process_towns(FILE *in, FILE *boundaries, FILE *ways)
 					if (attrs[i].type != attr_none)
 						item_bin_add_attr(ib, &attrs[i]);
 				}
-				item_bin_write_match(ib, attr_town_name, attr_town_name_match, 5, result->file);
+				if(item_bin_get_attr(ib, attr_district_name, NULL))
+					item_bin_write_match(ib, attr_district_name, attr_district_name_match, 5, result->file);
+				else
+					item_bin_write_match(ib, attr_town_name, attr_town_name_match, 5, result->file);
 			}
 		}
 	}
