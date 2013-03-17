@@ -31,6 +31,7 @@ struct vehicleprofile {
 	int static_speed;			/**< Maximum speed of vehicle to consider it stationary */
 	int static_distance;			/**< Maximum distance of previous position of vehicle to consider it stationary */
 	char *name;				/**< the vehicle profile name */
+	char *route_depth;			/**< the route depth attribute */
 	int width;				/**< Width of the vehicle in cm */
 	int height;				/**< Height of the vehicle in cm */
 	int length;				/**< Length of the vehicle in cm */
@@ -39,6 +40,7 @@ struct vehicleprofile {
 	int dangerous_goods;			/**< Flags of dangerous goods present */
 	int through_traffic_penalty;		/**< Penalty when driving on a through traffic limited road */
 	GHashTable *roadprofile_hash;
+	struct attr active_callback;
 };
 
 struct vehicleprofile * vehicleprofile_new(struct attr *parent, struct attr **attrs);
