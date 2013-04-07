@@ -204,7 +204,7 @@ struct country_table {
 	{ 242,"Fiji"},
  	{ 246,"Finland,Suomi"},
 	{ 248,"Åland Islands"},
- 	{ 250,"France,République française,FR"},
+ 	{ 250,"France,République française,FR","3s5c7M"},
 	{ 254,"French Guiana"},
 	{ 258,"French Polynesia"},
 	{ 260,"French Southern Territories"},
@@ -213,7 +213,7 @@ struct country_table {
 	{ 268,"Georgia"},
 	{ 270,"Gambia"},
 	{ 275,"Palestinian Territory, Occupied"},
-	{ 276,"Germany,Deutschland,Bundesrepublik Deutschland","345c7m"},
+	{ 276,"Germany,Deutschland,Bundesrepublik Deutschland","345c7M"},
 	{ 288,"Ghana"},
 	{ 292,"Gibraltar"},
 	{ 296,"Kiribati"},
@@ -1552,7 +1552,7 @@ osm_end_relation(struct maptool_osm *osm)
 
 	in_relation=0;
 
-	if(experimental && attr_longest_match(attr_mapping_rel2poly_place, attr_mapping_rel2poly_place_count, &type, 1)) {
+	if(attr_longest_match(attr_mapping_rel2poly_place, attr_mapping_rel2poly_place_count, &type, 1)) {
 		item_bin->type=type;
 	}
 	else 
@@ -1627,8 +1627,7 @@ relation_add_tag(char *k, char *v)
 		item_bin_add_attr_string(item_bin, attr_osm_tag, tag);
 	}
 
-	if(experimental)
-		osm_update_attr_present(k,v);
+	osm_update_attr_present(k,v);
 }
 
 
@@ -1906,6 +1905,8 @@ osm_process_town_by_boundary(GList *bl, struct item_bin *ib, struct coord *c, st
 						case 'c':
 							attr_type=attr_county_name;
 							break;
+						case 'M':
+							b->ib->type=type_poly_place6;
 						case 'm':
 							attr_type=attr_municipality_name;
 							break;
@@ -1950,7 +1951,7 @@ osm_town_relations_to_poly(GList *boundaries, FILE *towns_poly)
 			GList *s=b->sorted_segments;
 			while(s) {
 				struct geom_poly_segment *seg=s->data;
-				if(seg->type==geom_poly_segment_type_way_outer && coord_is_equal(*seg->first,*seg->last)) {
+				if((seg->type==geom_poly_segment_type_way_outer || seg->type==geom_poly_segment_type_way_unknown) && coord_is_equal(*seg->first,*seg->last)) {
 					struct item_bin *ib=init_item(b->ib->type);
 					void *a;
 					item_bin_add_coord(ib, seg->first, seg->last-seg->first+1);
@@ -1972,12 +1973,13 @@ osm_town_relations_to_poly(GList *boundaries, FILE *towns_poly)
 
 
 void
-osm_process_towns(FILE *in, FILE *boundaries, FILE *ways)
+osm_process_towns(FILE *in, FILE *boundaries, FILE *ways, char *suffix)
 {
 	struct item_bin *ib;
 	GList *bl;
 	GHashTable *town_hash;
 	struct attr attrs[11];
+	FILE *towns_poly;
 
 	profile(0,NULL);
 	bl=process_boundaries(boundaries, ways);
@@ -2055,11 +2057,9 @@ osm_process_towns(FILE *in, FILE *boundaries, FILE *ways)
 		}
 	}
 
-	if(experimental) {
-		FILE *f=tempfile("","towns_poly",1);
-		osm_town_relations_to_poly(bl, f);
-		fclose(f);
-	}
+	towns_poly=tempfile(suffix,"towns_poly",1);
+	osm_town_relations_to_poly(bl, towns_poly);
+	fclose(towns_poly);
 	
 	g_hash_table_destroy(town_hash);
 	profile(0, "Finished processing towns\n");
