@@ -2004,7 +2004,7 @@ binmap_search_street_by_estimate(struct map_priv *map, struct item *town, struct
 static struct map_rect_priv *
 binmap_search_housenumber_by_estimate(struct map_priv *map, struct coord *c, struct map_selection *sel)
 {
-	int size = 20;
+	int size = 400;
 	sel->u.c_rect.lu.x = c->x-size;
 	sel->u.c_rect.lu.y = c->y+size;
 	sel->u.c_rect.rl.x = c->x+size;
@@ -2012,7 +2012,6 @@ binmap_search_housenumber_by_estimate(struct map_priv *map, struct coord *c, str
 
 	sel->range = item_range_all;
 	sel->order = 18;
-	//sel->next = NULL;
 
 	return map_rect_new_binfile(map, sel);
 }
@@ -2157,39 +2156,71 @@ duplicate_equal(gconstpointer a, gconstpointer b)
 }
 
 /**
- * @brief
+ * @brief Test an item if it's duplicate. If it's not a duplicate, return new struct duplicate to be duplicate_insert()'ed.
  * @param msp pointer to private map search data
  * @param item item to check
  * @param attr_type
+ * returns - pointer to new struct duplicate, if this item is not already exist in hash
+ *         - NULL if this item already exists in duplicate hash or doesnt have an attr_type attr;
  */
-static int
-duplicate(struct map_search_priv *msp, struct item *item, enum attr_type attr_type)
+static struct duplicate*
+duplicate_test(struct map_search_priv *msp, struct item *item, enum attr_type attr_type)
 {
 	struct attr attr;
+	int len;
+	char *buffer;
+	struct duplicate *d;
+	
 	if (!msp->search_results)
 		msp->search_results = g_hash_table_new_full(duplicate_hash, duplicate_equal, g_free, NULL);
 	binfile_attr_rewind(item->priv_data);
 	if (!item_attr_get(item, attr_type, &attr))
-		return 1;
-	{
-		int len=sizeof(struct  coord)+strlen(attr.u.str)+1;
-		char *buffer=g_alloca(sizeof(char)*len);
-		struct duplicate *d=(struct duplicate *)buffer;
-		if (!item_coord_get(item, &d->c, 1)) {
-			d->c.x=0;
-			d->c.y=0;
-		}
-		binfile_coord_rewind(item->priv_data);
-		strcpy(d->str, attr.u.str);
-		if (!g_hash_table_lookup(msp->search_results, d)) {
-			struct duplicate *dc=g_malloc(len);
-			memcpy(dc, d, len);
-			g_hash_table_insert(msp->search_results, dc, GINT_TO_POINTER(1));
-			binfile_attr_rewind(item->priv_data);
-			return 0;
-		}
+		return NULL;
+	len=sizeof(struct  coord)+strlen(attr.u.str)+1;
+	buffer=g_alloca(sizeof(char)*len);
+	d=(struct duplicate *)buffer;
+	if (!item_coord_get(item, &d->c, 1)) {
+		d->c.x=0;
+		d->c.y=0;
 	}
-	return 2;
+	strcpy(d->str, attr.u.str);
+	binfile_coord_rewind(item->priv_data);
+	binfile_attr_rewind(item->priv_data);
+	if (!g_hash_table_lookup(msp->search_results, d)) {
+		struct duplicate *dr=g_malloc(len);
+		memcpy(dr, d, len);
+		return dr;
+	}
+	return NULL;
+}
+
+/**
+ * @brief Insert struct duplicate item into the duplicate hash.
+ * @param msp pointer to private map search data
+ * @param duplicate Duplicate info to insert
+ */
+static void
+duplicate_insert(struct map_search_priv *msp, struct duplicate *d)
+{
+	g_hash_table_insert(msp->search_results, d, GINT_TO_POINTER(1));
+}
+
+/**
+ * @brief Check if item is dupicate and update duplicate hash if needed.
+ * @param msp pointer to private map search data
+ * @param item item to check
+ * @param attr_type
+ * @returns 0 if item is not a duplicate
+ * 	    1 if item is duplicate or doesn't have required attr_type attribute
+ */
+static int
+duplicate(struct map_search_priv *msp, struct item *item, enum attr_type attr_type)
+{
+	struct duplicate *d=duplicate_test(msp, item, attr_type);
+	if(!d)
+		return 1;
+	duplicate_insert(msp,d);
+	return 0;
 }
 
 static int 
@@ -2217,6 +2248,7 @@ binmap_search_get_item(struct map_search_priv *map_search)
 
 	for (;;) {
 		while ((it  = map_rect_get_item_binfile(map_search->mr))) {
+			int has_house_number=0;
 			switch (map_search->search.type) {
 			case attr_town_name:
 			case attr_district_name:
@@ -2247,14 +2279,20 @@ binmap_search_get_item(struct map_search_priv *map_search)
 					struct attr at;
 					if (!map_selection_contains_item_rect(map_search->mr->sel, it))
 						break;
-					if(map_search->boundaries && !item_inside_poly_list(it,map_search->boundaries))
-						break;
-							
+						
 					if(binfile_attr_get(it->priv_data, attr_label, &at)) {
 						int i,match=0;
 						char *str;
 						char *word;
 						struct coord c[128];
+						struct duplicate *d;
+						
+						/* Extracting all coords here makes duplicate_new() not consider them (we don't want all 
+						 * street segments to be reported as separate streets). */
+						while(item_coord_get(it,c,128)>0);
+						d=duplicate_test(map_search, it, attr_label);
+						if(!d)
+							break;
 						
 						str=g_strdup(at.u.str);
 						word=str;
@@ -2273,29 +2311,35 @@ binmap_search_get_item(struct map_search_priv *map_search)
 						} while (word);
 						g_free(str);
 						
-						/* Extracting all coords here makes duplicate() not consider them. */
-						while(item_coord_get(it,c,128)>0);
-						if (match && !duplicate(map_search, it, attr_label)) {
-							item_coord_rewind(it);
-							return it;
+						if(!match) {
+							/* Remember this non-matching street name in duplicate hash to skip name 
+							  * comparison for its following segments */
+							duplicate_insert(map_search, d);
+							break;
 						}
+							
+						if(map_search->boundaries && !item_inside_poly_list(it,map_search->boundaries)) {
+							/* Other segments may fit the town poly. Do not update hash for now. */
+							g_free(d);
+							break;
+						}
+
+						duplicate_insert(map_search, d);
+						item_coord_rewind(it);
+						return it;
 					}
 				}
 				break;
 			case attr_house_number:
-				if ((it->type == type_house_number)||(it->type == type_house_number_interpolation_even)
-					||(it->type == type_house_number_interpolation_odd)
-					||(it->type == type_house_number_interpolation_all)
-					)
+				has_house_number=binfile_attr_get(it->priv_data, attr_house_number, &at);
+				if (has_house_number || (it->type == type_house_number)
+					|| (it->type == type_house_number_interpolation_even) || (it->type == type_house_number_interpolation_odd) 
+					|| (it->type == type_house_number_interpolation_all) )
 				{
-					// is it a housenumber?
-					if (binfile_attr_get(it->priv_data, attr_house_number, &at))
+					if (has_house_number)
 					{
-						// match housenumber to our string
 						if (!case_cmp(at.u.str, map_search->search.u.str, map_search->partial))
 						{
-							//binfile_attr_get(it->priv_data, attr_street_name, &at);
-							//dbg(0,"hnnn B1 street_name=%s",at.u.str);
 							if (!duplicate(map_search, it, attr_house_number))
 							{
 								binfile_attr_rewind(it->priv_data);
@@ -2305,6 +2349,7 @@ binmap_search_get_item(struct map_search_priv *map_search)
 					} else
 						return it;
 				} else if(map_search->mode==2 && map_search->parent_name && item_is_street(*it) && binfile_attr_get(it->priv_data, attr_street_name, &at) && !strcmp(at.u.str, map_search->parent_name) ) {
+					/* If matching street segment found, prepare to expand house number search region +100m around each way point */
 					struct coord c;
 					while(item_coord_get(it,&c,1)) {
 						c.x-=100;
@@ -2321,6 +2366,7 @@ binmap_search_get_item(struct map_search_priv *map_search)
 			}
 		}
 		if(map_search->search.type==attr_house_number && map_search->mode==2 && map_search->parent_name) {
+			/* For unindexed house number search, check if street segments extending possible housenumber locations were found */
 			if(map_search->ms.u.c_rect.lu.x!=map_search->rect_new.lu.x || map_search->ms.u.c_rect.lu.y!=map_search->rect_new.lu.y || 
 				map_search->ms.u.c_rect.rl.x!=map_search->rect_new.rl.x || map_search->ms.u.c_rect.rl.y!=map_search->rect_new.rl.y) {
 					map_search->ms.u.c_rect=map_search->rect_new;
