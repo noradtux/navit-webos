@@ -275,7 +275,8 @@ gui_internal_html_start(void *dummy, const char *tag_name, const char **names, c
 				}
 			}
 			if (!strcmp(type,"text") || !strcmp(type,"password")) {
-				html->w=gui_internal_label_new(this, NULL);
+				char *value=find_attr(names, values, "value");
+				html->w=gui_internal_label_new(this, value);
 				html->w->background=this->background;
 			        html->w->flags |= div_flags(names, values);
 				html->w->state|=STATE_EDITABLE;
@@ -382,9 +383,15 @@ gui_internal_set_refresh_callback(struct gui_priv *this, char *cond)
 		struct menu_data *menu_data=gui_internal_menu_data(this);
 		dbg(2,"navit=%p\n",this->nav);
 		type=command_evaluate_to_attr(&this->self, cond, NULL, &menu_data->refresh_callback_obj);
-		if (type == attr_none)
+		if (type == attr_none) {
+			dbg(0,"can't get type of '%s'\n",cond);
 			return;
+		}	
 		func=object_func_lookup(menu_data->refresh_callback_obj.type);
+		if (!func)
+			dbg(0,"'%s' has no functions\n",cond);
+		if (func && !func->add_attr)
+			dbg(0,"'%s' has no add_attr function\n",cond);
 		if (!func || !func->add_attr)
 			return;
 		menu_data->refresh_callback.type=attr_callback;

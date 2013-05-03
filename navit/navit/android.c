@@ -61,6 +61,18 @@ android_find_method(jclass class, char *name, char *args, jmethodID *ret)
 	return 1;
 }
 
+
+int
+android_find_static_method(jclass class, char *name, char *args, jmethodID *ret)
+{
+	*ret = (*jnienv)->GetStaticMethodID(jnienv, class, name, args);
+	if (*ret == NULL) {
+		dbg(0,"Failed to get static Method %s with signature %s\n",name,args);
+		return 0;
+	}
+	return 1;
+}
+
 JNIEXPORT void JNICALL
 Java_org_navitproject_navit_Navit_NavitMain( JNIEnv* env, jobject thiz, jobject activity, jobject lang, int version, jobject display_density_string, jobject path)
 {
@@ -198,7 +210,7 @@ Java_org_navitproject_navit_NavitGraphics_CallbackLocalizedString( JNIEnv* env, 
 	s=(*env)->GetStringUTFChars(env, str, NULL);
 	//dbg(0,"*****string=%s\n",s);
 
-	localized_str=gettext(s);
+	localized_str=navit_nls_gettext(s);
 	//dbg(0,"localized string=%s",localized_str);
 
 	// jstring dataStringValue = (jstring) localized_str;
@@ -441,7 +453,7 @@ Java_org_navitproject_navit_NavitGraphics_GetAllCountries( JNIEnv* env, jobject 
 		if (strlen(res->country->iso2)==2)
 		{
 			jstring j_iso2 = (*env)->NewStringUTF(env, res->country->iso2);
-			jstring j_name = (*env)->NewStringUTF(env, gettext(res->country->name));
+			jstring j_name = (*env)->NewStringUTF(env, navit_nls_gettext(res->country->name));
 
 			current_country = (jobjectArray)(*env)->NewObjectArray(env, 2, (*env)->FindClass(env, "java/lang/String"), NULL);
 
