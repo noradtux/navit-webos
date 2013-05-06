@@ -1294,7 +1294,7 @@ gui_internal_cmd_position_do(struct gui_priv *this, struct pcoord *pc_in, struct
 			} else
 				text=g_strdup(item_to_name(item->type));
 			gui_internal_widget_append(wtable,row=gui_internal_widget_table_row_new(this,gravity_left|orientation_horizontal|flags_fill));
-			gui_internal_widget_append(row,	wc=gui_internal_cmd_pois_item(this, NULL, itemo, NULL, -1, text));
+			gui_internal_widget_append(row,	wc=gui_internal_cmd_pois_item(this, NULL, itemo, NULL, NULL, -1, text));
 			wc->c=pc;
 			g_free(wc->name);
 			wc->name=g_strdup(text);
@@ -3092,7 +3092,7 @@ gui_internal_populate_route_table(struct gui_priv * this, struct navit * navit)
 	struct map_rect * mr=NULL;
 	struct navigation * nav = NULL;
 	struct item * item =NULL;
-	struct attr attr;
+	struct attr attr,route;
 	struct widget * label = NULL;
 	struct widget * row = NULL;
 	struct coord c;
@@ -3104,7 +3104,31 @@ gui_internal_populate_route_table(struct gui_priv * this, struct navit * navit)
 	if(map)
 	  mr = map_rect_new(map,NULL);
 	if(mr) {
+		GList *toprow;
+		struct item topitem={0};
+		toprow=gui_internal_widget_table_top_row(this, this->route_data.route_table);
+		if(toprow && toprow->data)
+			topitem=((struct widget*)toprow->data)->item;
 		gui_internal_widget_table_clear(this,this->route_data.route_table);
+		if (navit_get_attr(navit, attr_route, &route, NULL)) {
+			struct attr destination_length, destination_time;
+			char *length=NULL,*time=NULL,*length_time;
+			if (route_get_attr(route.u.route, attr_destination_length, &destination_length, NULL))
+				length=attr_to_text_ext(&destination_length, NULL, attr_format_with_units, attr_format_default, NULL);
+			if (route_get_attr(route.u.route, attr_destination_time, &destination_time, NULL))
+				time=attr_to_text_ext(&destination_time, NULL, attr_format_with_units, attr_format_default, NULL);
+	       		row = gui_internal_widget_table_row_new(this,
+								  gravity_left
+								  | flags_fill
+								  | orientation_horizontal);
+			gui_internal_widget_append(this->route_data.route_table,row);
+			length_time=g_strdup_printf("%s %s",length,time);	
+			label = gui_internal_label_new(this,length_time);
+			g_free(length_time);
+			g_free(length);
+			g_free(time);
+			gui_internal_widget_append(row,label);
+		}
 		while((item = map_rect_get_item(mr))) {
 			if(item_attr_get(item,attr_navigation_long,&attr)) {
 			  row = gui_internal_widget_table_row_new(this,
@@ -3117,6 +3141,7 @@ gui_internal_populate_route_table(struct gui_priv * this, struct navit * navit)
 			  gui_internal_widget_append(row,label);
 
 			  label->item=*item;
+			  row->item=*item;
 			  item_coord_get(item, &c, 1);
 			  label->c.x=c.x;
 			  label->c.y=c.y;
@@ -3124,6 +3149,8 @@ gui_internal_populate_route_table(struct gui_priv * this, struct navit * navit)
 			  label->func=gui_internal_cmd_position;
 			  label->state|=STATE_SENSITIVE;
 			  label->data=(void*)2;	  
+			  if(toprow && item->id_hi==topitem.id_hi && item->id_lo==topitem.id_lo)
+			  	gui_internal_widget_table_set_top_row(this, this->route_data.route_table, row);
 			}
 
 		}

@@ -42,8 +42,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if 0
 #include <math.h>
+#if 0
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -392,6 +392,36 @@ rp_iterator_end(struct route_graph_point_iterator *it) {
 	} else {
 		return 0;
 	}
+}
+
+static void
+route_path_get_distances(struct route_path *path, struct coord *c, int count, int *distances)
+{
+	int i;
+	for (i = 0 ; i < count ; i++)
+		distances[i]=INT_MAX;
+	while (path) {
+		struct route_path_segment *seg=path->path;
+		while (seg) {
+			for (i = 0 ; i < count ; i++) {
+				int dist=transform_distance_polyline_sq(seg->c, seg->ncoords, &c[i], NULL, NULL);
+				if (dist < distances[i]) 
+					distances[i]=dist;
+			}
+			seg=seg->next;
+		}
+		path=path->next;
+	}
+	for (i = 0 ; i < count ; i++) {
+		if (distances[i] != INT_MAX)
+			distances[i]=sqrt(distances[i]);
+	}
+}
+
+void
+route_get_distances(struct route *this, struct coord *c, int count, int *distances)
+{
+	return route_path_get_distances(this->path2, c, count, distances);
 }
 
 /**
@@ -3202,15 +3232,27 @@ rp_attr_get(void *priv_data, enum attr_type attr_type, struct attr *attr)
 		}
 	case attr_label:
 		mr->attr_next=attr_street_item;
-		if (mr->item.type != type_rg_point) 
-			return 0;
 		attr->type = attr_label;
 		if (mr->str)
 			g_free(mr->str);
-		if (p->value != INT_MAX)
-			mr->str=g_strdup_printf("%d", p->value);
-		else
-			mr->str=g_strdup("-");
+		if (mr->item.type == type_rg_point) {
+			if (p->value != INT_MAX)
+				mr->str=g_strdup_printf("%d", p->value);
+			else
+				mr->str=g_strdup("-");
+		} else {
+			int len=seg->data.len;
+			int speed=route_seg_speed(route->vehicleprofile, &seg->data, NULL);
+			int time=route_time_seg(route->vehicleprofile, &seg->data, NULL);
+			if (speed)
+				mr->str=g_strdup_printf("%dm %dkm/h %d.%ds",len,speed,time/10,time%10);
+			else if (len)
+				mr->str=g_strdup_printf("%dm",len);
+			else {
+				mr->str=NULL;
+				return 0;
+			}
+		}
 		attr->u.str = mr->str;
 		return 1;
 	case attr_street_item:
@@ -3574,6 +3616,11 @@ rm_get_item(struct map_rect_priv *mr)
 			id=mr->seg;
 			break;
 		}
+		if (mr->dest && g_list_next(mr->dest)) {
+			id=mr->dest;
+			mr->item.type=type_waypoint;
+			break;
+		}
 		mr->item.type=type_route_end;
 		id=&(mr->mpriv->route->destinations);
 		if (mr->mpriv->route->destinations)
@@ -3834,17 +3881,25 @@ route_get_attr(struct route *this_, enum attr_type type, struct attr *attr, stru
 		break;
 	case attr_destination_time:
 		if (this_->path2 && (this_->route_status == route_status_path_done_new || this_->route_status == route_status_path_done_incremental)) {
-
-			attr->u.num=this_->path2->path_time;
+			struct route_path *path=this_->path2;
+			attr->u.num=0;
+			while (path) {
+				attr->u.num+=path->path_time;
+				path=path->next;
+			}
 			dbg(1,"path_time %d\n",attr->u.num);
-		}
-		else
+		} else
 			ret=0;
 		break;
 	case attr_destination_length:
-		if (this_->path2 && (this_->route_status == route_status_path_done_new || this_->route_status == route_status_path_done_incremental))
-			attr->u.num=this_->path2->path_len;
-		else
+		if (this_->path2 && (this_->route_status == route_status_path_done_new || this_->route_status == route_status_path_done_incremental)) {
+			struct route_path *path=this_->path2;
+			attr->u.num=0;
+			while (path) {
+				attr->u.num+=path->path_len;
+				path=path->next;
+			}
+		} else
 			ret=0;
 		break;
 	default:
