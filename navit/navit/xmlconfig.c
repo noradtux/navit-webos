@@ -267,14 +267,11 @@ static struct object_func object_funcs[] = {
 	{ attr_icon,       NEW(icon_new),     NULL, NULL, NULL, NULL, ADD(element_add_attr)},
 	{ attr_image,      NEW(image_new)},
 	{ attr_itemgra,    NEW(itemgra_new),  NULL, NULL, NULL, NULL, ADD(itemgra_add_attr)},
-	{ attr_log,        NEW(log_new)},
-	{ attr_navigation, NEW(navigation_new), GET(navigation_get_attr)},
 	{ attr_plugins,    NEW(plugins_new),  NULL, NULL, NULL, NULL, NULL, NULL, INIT(plugins_init)},
 	{ attr_plugin,     NEW(plugin_new)},
 	{ attr_polygon,    NEW(polygon_new),  NULL, NULL, NULL, NULL, ADD(element_add_attr)},
 	{ attr_polyline,   NEW(polyline_new), NULL, NULL, NULL, NULL, ADD(element_add_attr)},
 	{ attr_route,      NEW(route_new), GET(route_get_attr), NULL, NULL, SET(route_set_attr), ADD(route_add_attr), REMOVE(route_remove_attr)},
-	{ attr_speech,     NEW(speech_new), GET(speech_get_attr), NULL, NULL, SET(speech_set_attr)},
 	{ attr_text,       NEW(text_new)},
 };
 
@@ -289,22 +286,30 @@ object_func_lookup(enum attr_type type)
 		return &layer_func;
 	case attr_layout:
 		return &layout_func;
+	case attr_log:
+		return &log_func;
 	case attr_map:
 		return &map_func;
 	case attr_maps:
 		return &maps_func;
 	case attr_mapset:
 		return &mapset_func;
+	case attr_navigation:
+		return &navigation_func;
 	case attr_navit:
 		return &navit_func;
 	case attr_profile_option:
 		return &profile_option_func;
 	case attr_roadprofile:
 		return &roadprofile_func;
+	case attr_script:
+		return &script_func;
 	case attr_osd:
 		return &osd_func;
 	case attr_trackingo:
 		return &tracking_func;
+	case attr_speech:
+		return &speech_func;
 	case attr_vehicle:
 		return &vehicle_func;
 	case attr_vehicleprofile:
@@ -358,7 +363,7 @@ static char *element_fixmes[]={
 };
 
 static void initStatic(void) {
-	elements=g_new0(struct element_func,43); //42 is a number of elements + ending NULL element
+	elements=g_new0(struct element_func,44); //43 is a number of elements + ending NULL element
 
 	elements[0].name="config";
 	elements[0].parent=NULL;
@@ -568,6 +573,11 @@ static void initStatic(void) {
 	elements[41].parent="profile_option";
 	elements[41].func=NULL;
 	elements[41].type=attr_roadprofile;
+
+	elements[42].name="script";
+	elements[42].parent="navit";
+	elements[42].func=NULL;
+	elements[42].type=attr_script;
 }
 
 /**
@@ -1272,6 +1282,16 @@ navit_object_set_methods(void *in, int in_size, void *out, int out_size)
 }
 
 struct navit_object *
+navit_object_new(struct attr **attrs, struct object_func *func, int size)
+{
+	struct navit_object *ret=g_malloc0(size);
+	ret->func=func;
+	ret->attrs=attr_list_dup(attrs);
+	navit_object_ref(ret);
+	return ret;
+}
+
+struct navit_object *
 navit_object_ref(struct navit_object *obj)
 {
 	obj->refcount++;
@@ -1312,12 +1332,18 @@ navit_object_get_attr(struct navit_object *obj, enum attr_type type, struct attr
 	return attr_generic_get_attr(obj->attrs, NULL, type, attr, iter);
 }
 
+void
+navit_object_callbacks(struct navit_object *obj, struct attr *attr)
+{
+	if (obj->attrs && obj->attrs[0] && obj->attrs[0]->type == attr_callback_list)
+		callback_list_call_attr_2(obj->attrs[0]->u.callback_list, attr->type, attr->u.data, 0);
+}
+
 int
 navit_object_set_attr(struct navit_object *obj, struct attr *attr)
 {
 	obj->attrs=attr_generic_set_attr(obj->attrs, attr);
-	if (obj->attrs && obj->attrs[0] && obj->attrs[0]->type == attr_callback_list)
-		callback_list_call_attr_2(obj->attrs[0]->u.callback_list, attr->type, attr->u.data, 0);
+	navit_object_callbacks(obj, attr);
 	return 1;
 }
 

@@ -61,6 +61,7 @@ struct suffix {
 };
 
 struct navigation {
+	NAVIT_OBJECT
 	struct route *route;
 	struct map *map;
 	struct item_hash *hash;
@@ -83,6 +84,7 @@ struct navigation {
 	int tell_street_name;
 	int delay;
 	int curr_delay;
+	int turn_around_count;
 };
 
 int distances[]={1,2,3,4,5,10,25,50,75,100,150,200,250,300,400,500,750,-1};
@@ -164,11 +166,24 @@ navigation_get_attr(struct navigation *this_, enum attr_type type, struct attr *
 		if (!item)
 			return 0;
 		break;
+	case attr_turn_around_count:
+		attr->u.num=this_->turn_around_count;
+		break;
 	default:
-		return 0;	
+		return navit_object_get_attr((struct navit_object *)this_, type, attr, iter);
 	}
 	attr->type=type;
 	return 1;
+}
+
+static void
+navigation_set_turnaround(struct navigation *this_, int val)
+{
+	if (this_->turn_around_count != val) {
+		struct attr attr=ATTR_INT(turn_around_count, val);
+		this_->turn_around_count=val;
+		navit_object_callbacks((struct navit_object *)this_, &attr);
+	}
 }
 
 int
@@ -177,10 +192,11 @@ navigation_set_attr(struct navigation *this_, struct attr *attr)
 	switch (attr->type) {
 	case attr_speech:
 		this_->speech=attr->u.speech;
-		return 1;
+		break;
 	default:
-		return 0;
+		break;
 	}
+	return navit_object_set_attr((struct navit_object *)this_, attr);
 }
 
 
@@ -189,7 +205,7 @@ navigation_new(struct attr *parent, struct attr **attrs)
 {
 	int i,j;
 	struct attr * attr;
-	struct navigation *ret=g_new0(struct navigation, 1);
+	struct navigation *ret=(struct navigation *)navit_object_new(attrs, &navigation_func, sizeof(struct navigation));
 	ret->hash=item_hash_new();
 	ret->callback=callback_list_new();
 	ret->callback_speech=callback_list_new();
@@ -1569,8 +1585,11 @@ show_maneuver(struct navigation *nav, struct navigation_itm *itm, struct navigat
 	if (type != attr_navigation_long_exact) 
 		distance=round_distance(distance);
 	if (type == attr_navigation_speech) {
-		if (nav->turn_around && nav->turn_around == nav->turn_around_limit) 
+		if (nav->turn_around && nav->turn_around == nav->turn_around_limit) {
+			navigation_set_turnaround(nav, nav->turn_around_count+1);
 			return g_strdup(_("When possible, please turn around"));
+		}
+		navigation_set_turnaround(nav, 0);
 		if (!connect) {
 			level=navigation_get_announce_level_cmd(nav, itm, cmd, distance-cmd->length);
 		}
@@ -2390,3 +2409,20 @@ navigation_init(void)
 {
 	plugin_register_map_type("navigation", navigation_map_new);
 }
+
+struct object_func navigation_func = {
+	attr_navigation,
+	(object_func_new)navigation_new,
+	(object_func_get_attr)navigation_get_attr,
+	(object_func_iter_new)navit_object_attr_iter_new,
+	(object_func_iter_destroy)navit_object_attr_iter_destroy,
+	(object_func_set_attr)navigation_set_attr,
+	(object_func_add_attr)navit_object_add_attr,
+	(object_func_remove_attr)navit_object_remove_attr,
+	(object_func_init)NULL,
+	(object_func_destroy)navigation_destroy,
+	(object_func_dup)NULL,
+	(object_func_ref)navit_object_ref,
+	(object_func_unref)navit_object_unref,
+};
+

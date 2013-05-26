@@ -182,6 +182,7 @@ ATTR(battery_capacity_rel) /* ppm */
 ATTR(battery_charge) /* mAh */
 ATTR(battery_resistance) /* mOhm */
 ATTR(battery_temperature) /* mK */
+ATTR(turn_around_count)
 ATTR2(0x00027500,type_rel_abs_begin)
 /* These attributes are int that can either hold relative		*
  * or absolute values. A relative value is indicated by 		*
@@ -371,6 +372,7 @@ ATTR(tile_name)
 ATTR(first_key)
 ATTR(last_key)
 ATTR(src_dir)
+ATTR(refresh_cond)
 ATTR2(0x0003ffff,type_string_end)
 ATTR2(0x00040000,type_special_begin)
 ATTR(order)
@@ -450,6 +452,7 @@ ATTR(config)
 ATTR(maps)
 ATTR(layout)
 ATTR(profile_option)
+ATTR(script)
 ATTR2(0x0008ffff,type_object_end)
 ATTR2(0x00090000,type_coord_begin)
 ATTR2(0x0009ffff,type_coord_end)
