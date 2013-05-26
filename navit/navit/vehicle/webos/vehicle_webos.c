@@ -257,10 +257,10 @@ vehicle_webos_position_attr_get(struct vehicle_priv *priv,
 					priv->fix_time = 0;
 					return 0;
 				}
-				dbg(2,"Fix Time: %d %s\n", priv->fix_time, priv->fixiso8601);
+				dbg(2,"Fix Time: %d %s\n", (int)priv->fix_time, priv->fixiso8601);
 			}
 			else {
-				dbg(2,"Fix Time: %d\n", priv->fix_time);
+				dbg(2,"Fix Time: %d\n", (int)priv->fix_time);
 				return 0;
 			}
 
