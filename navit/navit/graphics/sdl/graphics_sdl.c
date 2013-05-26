@@ -958,7 +958,7 @@ resize_ft_buffer (unsigned int new_size)
     if (new_size > ft_buffer_size) {
 	g_free (ft_buffer);
 	ft_buffer = g_malloc (new_size);
-	dbg(1, "old_size(%i) new_size(%i) ft_buffer(%i)\n", ft_buffer_size, new_size, ft_buffer);
+	dbg(1, "old_size(%i) new_size(%i) ft_buffer(%p)\n", ft_buffer_size, new_size, ft_buffer);
 	ft_buffer_size = new_size;
     }
 }
@@ -1947,7 +1947,7 @@ static gboolean graphics_sdl_idle(void *data)
 		    dbg(2,"key mod: 0x%x\n", key_mod);
 
 		    if (keybuf[0]) {
-			dbg(2,"key: %s 0x%x\n", keybuf, keybuf);
+			dbg(2,"key: %s %p\n", keybuf, keybuf);
 			callback_list_call_attr_1(gr->cbl, attr_keypress, (void *)keybuf);
 		    }
 		    break;
@@ -2399,7 +2399,7 @@ event_sdl_watch_stopthread()
 static struct event_watch *
 event_sdl_add_watch(void *fd, enum event_watch_cond cond, struct callback *cb)
 {
-    dbg(1,"fd(%d) cond(%x) cb(%x)\n", fd, cond, cb);
+    dbg(1,"fd(%p) cond(%x) cb(%p)\n", fd, cond, cb);
 
     event_sdl_watch_stopthread();
 
